@@ -45,6 +45,8 @@ for device in devices:
                     else:
                         vlan_description = ""
                 if "153.9." in vlan_address:
+                    if "de" in vlan_description:
+                        vlan_description = vlan_description[:-2]
                     vlans.append(Vlan(vlan_name, vlan_id, vlan_description, vlan_address))
     device.set_vlans(vlans)
 
@@ -53,11 +55,27 @@ for device in devices:
     for vlan in device.vlans:
         print "\t" + vlan.name + " " + vlan.id + " " + vlan.description + " " + vlan.address
 
-pl = packetlogic2.connect("192.168.1.25", user, password)
+pl = packetlogic2.connect("10.254.29.11", user, password)
 r = pl.Ruleset()
 
 for device in devices:
-    obj = r.object_find('/NetObjects/' + device.name)
-    if obj is None:
-        obj = r.add_object('/NetObjects/' + device.name)
+    device_obj_name = device.name + "no"
+    obj = r.object_get('/NetObjects/' + device_obj_name)
+    if not obj:
+        r.object_add('/NetObjects/' + device_obj_name)
+        obj = r.object_get('/NetObjects/' + device_obj_name)
     for vlan in device.vlans:
+        vlan_obj_name = vlan.name + "_" + vlan.description + "no"
+        vlan_obj = r.object_get('/NetObjects/' + device_obj_name + "/" + vlan_obj_name)
+        if not vlan_obj:
+            r.object_add('/NetObjects/' + device_obj_name + "/" + vlan_obj_name)
+            vlan_obj = vlan_obj = r.object_get('/NetObjects/' + device_obj_name + "/" + vlan_obj_name)
+        if vlan.address not in vlan_obj.items:
+            vlan_obj.add(vlan.address)
+#for device in devices:
+#    obj = r.object_get('/NetObjects/VOIP_NETWORKSno')
+#    for vlan in device.vlans:
+#        if vlan.address not in obj.items:
+#            obj.add(vlan.address)
+
+r.commit()
